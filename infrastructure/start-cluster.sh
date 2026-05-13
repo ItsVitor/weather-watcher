@@ -6,11 +6,23 @@ CONFIG_DIR="$(pwd)/infrastructure/kraft"
 echo "=== Weather-Watcher Kafka KRaft Cluster ==="
 echo ""
 
-# Gerar UUID do cluster (apenas na primeira execução)
-if [ ! -f "$CONFIG_DIR/cluster.id" ]; then
-    echo "Gerando Cluster UUID..."
-    CLUSTER_ID=$($KAFKA_HOME/bin/kafka-storage.sh random-uuid)
-    echo $CLUSTER_ID > "$CONFIG_DIR/cluster.id"
+# Verificar se os diretórios de log existem
+LOG_DIRS_EXIST=true
+if [ ! -d "/tmp/kraft-logs-1" ] || [ ! -d "/tmp/kraft-logs-2" ] || [ ! -d "/tmp/kraft-logs-3" ]; then
+    LOG_DIRS_EXIST=false
+fi
+
+# Gerar UUID do cluster (primeira execução ou após limpeza de /tmp)
+if [ ! -f "$CONFIG_DIR/cluster.id" ] || [ "$LOG_DIRS_EXIST" = false ]; then
+    if [ -f "$CONFIG_DIR/cluster.id" ] && [ "$LOG_DIRS_EXIST" = false ]; then
+        echo "Diretórios de log não encontrados. Reformatando storage..."
+        CLUSTER_ID=$(cat "$CONFIG_DIR/cluster.id")
+    else
+        echo "Gerando Cluster UUID..."
+        CLUSTER_ID=$($KAFKA_HOME/bin/kafka-storage.sh random-uuid)
+        echo $CLUSTER_ID > "$CONFIG_DIR/cluster.id"
+    fi
+    
     echo "Cluster ID: $CLUSTER_ID"
     echo ""
     
