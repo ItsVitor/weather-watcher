@@ -15,7 +15,9 @@ O sistema opera sobre um cluster Kafka local (3 Brokers para garantia de alta di
 
 ### 2. Produtores (Producers)
 
-* **`WeatherAPIProducer`**: Atua como um *Source Connector*. Realiza *polling* a cada 15 minutos na API Open-Meteo, extrai as métricas de temperatura, chuva e índice UV, empacota os dados via SerDes customizado em formato JSON e publica o evento primitivo no tópico `weather-raw`.
+* **`OpenMeteoClient`**: Cliente HTTP responsável por construir requisições para a API Open-Meteo, realizar chamadas HTTP GET e parsear as respostas JSON em objetos `WeatherData`.
+* **`WeatherAPIProducer`**: Produtor Kafka que publica eventos `WeatherData` no tópico `weather-raw` utilizando serialização customizada (WeatherSerializer).
+* **`WeatherProducerApp`**: Aplicação principal que orquestra o ciclo de ingestão. Realiza *polling* a cada 15 minutos chamando o `OpenMeteoClient` para obter dados meteorológicos e publicando-os via `WeatherAPIProducer`.
 
 ### 3. Consumidores (Consumers & Processors)
 
@@ -37,9 +39,13 @@ src/main/kotlin/org/example/
 │   └── AlertEvent.kt            # Data class padronizando a mensagem de saída
 ├── serdes/
 │   ├── WeatherSerializer.kt     # Serialização de WeatherData via Jackson ObjectMapper
-│   └── WeatherDeserializer.kt   # Deserialização de WeatherData via Jackson ObjectMapper
+│   ├── WeatherDeserializer.kt   # Deserialização de WeatherData via Jackson ObjectMapper
+│   ├── AlertSerializer.kt       # Serialização de AlertEvent via Jackson ObjectMapper
+│   └── AlertDeserializer.kt     # Deserialização de AlertEvent via Jackson ObjectMapper
 ├── producers/
-│   └── WeatherAPIProducer.kt    # Lógica de HTTP Client e envio para o broker
+│   ├── OpenMeteoClient.kt       # Cliente HTTP para API Open-Meteo (requisições e parsing JSON)
+│   ├── WeatherAPIProducer.kt    # Produtor Kafka para publicar no tópico weather-raw
+│   └── WeatherProducerApp.kt    # Aplicação principal (orquestração do polling a cada 15min)
 ├── consumers/
 │   ├── DailySummaryConsumer.kt  # Processamento dos alertas das 6h00
 │   ├── HourlyRainConsumer.kt    # Avaliação de chuva iminente
