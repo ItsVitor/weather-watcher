@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import org.example.config.WeatherWatcherConfig
 import org.example.model.WeatherData
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -15,9 +16,9 @@ import java.time.format.DateTimeFormatter
  * Responsável por construir requisições, fazer chamadas HTTP e parsear respostas JSON.
  */
 class OpenMeteoClient(
-    private val latitude: Double = -20.31,
-    private val longitude: Double = -40.31,
-    private val timezone: String = "America/Sao_Paulo"
+    private val latitude: Double = WeatherWatcherConfig.locationLatitude,
+    private val longitude: Double = WeatherWatcherConfig.locationLongitude,
+    private val timezone: String = WeatherWatcherConfig.timezone
 ) {
     private val httpClient = OkHttpClient()
     private val objectMapper = ObjectMapper().apply {

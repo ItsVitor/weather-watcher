@@ -94,7 +94,7 @@ class DailySummaryConsumer(
         val alerts = mutableListOf<AlertEvent>()
 
         // 1. Alerta de Guarda-Chuva
-        if (data.dailyMaxPrecipitationProbability > 0) {
+        if (data.dailyMaxPrecipitationProbability > 70) {
             alerts.add(createUmbrellaAlert(data))
         }
 

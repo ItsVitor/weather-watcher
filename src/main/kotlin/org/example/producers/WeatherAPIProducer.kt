@@ -4,6 +4,7 @@ import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
+import org.example.config.WeatherWatcherConfig
 import org.example.model.WeatherData
 import org.example.serdes.WeatherSerializer
 import org.slf4j.LoggerFactory
@@ -13,7 +14,7 @@ import java.util.*
  * Produtor Kafka responsável por publicar dados meteorológicos no tópico weather-raw.
  */
 class WeatherAPIProducer(
-    private val bootstrapServers: String = "localhost:9092",
+    private val bootstrapServers: String = WeatherWatcherConfig.kafkaBootstrapServers,
     private val topic: String = "weather-raw"
 ) : AutoCloseable {
 

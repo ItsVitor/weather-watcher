@@ -1,14 +1,15 @@
 package org.example.producers
 
+import org.example.config.WeatherWatcherConfig
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 /**
  * Aplicação principal do produtor meteorológico.
- * Realiza polling da API Open-Meteo a cada 15 minutos e publica no Kafka.
+ * Realiza polling da API Open-Meteo e publica no Kafka.
  */
 class WeatherProducerApp(
-    private val pollingIntervalMinutes: Long = 1
+    private val pollingIntervalMinutes: Long = WeatherWatcherConfig.pollingIntervalMinutes
 ) {
     private val logger = LoggerFactory.getLogger(WeatherProducerApp::class.java)
     private val client = OpenMeteoClient()
@@ -17,7 +18,7 @@ class WeatherProducerApp(
     fun start() {
         logger.info("=== Weather-Watcher Producer iniciado ===")
         logger.info("Polling interval: $pollingIntervalMinutes minutos")
-        logger.info("Localização: Vitória-ES (lat: -20.31, lon: -40.31)")
+        logger.info("Localização: Vitória-ES (lat: ${WeatherWatcherConfig.locationLatitude}, lon: ${WeatherWatcherConfig.locationLongitude})")
 
         Runtime.getRuntime().addShutdownHook(Thread {
             logger.info("Encerrando produtor...")
