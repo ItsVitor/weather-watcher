@@ -74,3 +74,5 @@ kotlin-ide/
 # Outros
 /infrastructure/kraft/cluster.id
 /target/
+
+.env
