@@ -11,7 +11,7 @@ object WeatherWatcherConfig {
      * Padrão: 15 minutos
      * Variável de ambiente: POLLING_INTERVAL_MINUTES
      */
-    val pollingIntervalMinutes: Long = System.getenv("POLLING_INTERVAL_MINUTES")?.toLongOrNull() ?: 1
+    val pollingIntervalMinutes: Long = System.getenv("POLLING_INTERVAL_MINUTES")?.toLongOrNull() ?: 15
     
     /**
      * Servidores Kafka bootstrap.
@@ -40,4 +40,30 @@ object WeatherWatcherConfig {
      * Variável de ambiente: TIMEZONE
      */
     val timezone: String = System.getenv("TIMEZONE") ?: "America/Sao_Paulo"
+    
+    /**
+     * Twilio Account SID.
+     * Variável de ambiente: TWILIO_ACCOUNT_SID (obrigatória)
+     */
+    val twilioAccountSid: String = System.getenv("TWILIO_ACCOUNT_SID") ?: ""
+    
+    /**
+     * Twilio Auth Token.
+     * Variável de ambiente: TWILIO_AUTH_TOKEN (obrigatória)
+     */
+    val twilioAuthToken: String = System.getenv("TWILIO_AUTH_TOKEN") ?: ""
+    
+    /**
+     * Número WhatsApp do Twilio (remetente).
+     * Formato: whatsapp:+14155238886
+     * Variável de ambiente: TWILIO_WHATSAPP_FROM (obrigatória)
+     */
+    val twilioWhatsAppFrom: String = System.getenv("TWILIO_WHATSAPP_FROM") ?: ""
+    
+    /**
+     * Número WhatsApp do destinatário.
+     * Formato: whatsapp:+5527999999999
+     * Variável de ambiente: WHATSAPP_TO (obrigatória)
+     */
+    val whatsAppTo: String = System.getenv("WHATSAPP_TO") ?: ""
 }
