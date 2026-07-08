@@ -57,17 +57,38 @@ class OpenMeteoClient(
     private fun parseWeatherData(json: JsonNode): WeatherData {
         val hourly = json.get("hourly")
         val daily = json.get("daily")
-
-        // Extrair arrays horários
-        val hourlyTimes = hourly.get("time").map { it.asText() }
-        val temperatures = hourly.get("temperature_2m").map { it.asDouble() }
-        val precipitationProbs = hourly.get("precipitation_probability").map { it.asInt() }
-
-        // Encontrar índice da hora atual (ou mais próxima)
         val now = LocalDateTime.now()
-        val currentIndex = findCurrentHourIndex(hourlyTimes, now)
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-        // Extrair dados diários (primeiro dia = hoje)
+        data class HourlyReading(
+            val time: LocalDateTime,
+            val temperature: Double,
+            val precipitationProb: Int,
+            val index: Int
+        )
+
+        val hourlyReadings = hourly.get("time")
+            .asSequence()  // Converter para sequence (equivalente a stream)
+            .mapIndexed { index, timeNode ->
+                HourlyReading(
+                    time = LocalDateTime.parse(timeNode.asText(), formatter),
+                    temperature = hourly.get("temperature_2m").get(index).asDouble(),
+                    precipitationProb = hourly.get("precipitation_probability").get(index).asInt(),
+                    index = index
+                )
+            }
+            .toList()
+
+        val currentReading = hourlyReadings
+            .stream() 
+            .filter { it.time.hour == now.hour && it.time.dayOfMonth == now.dayOfMonth }
+            .findFirst()
+            .orElse(hourlyReadings.first())
+
+        val nextHourReading = hourlyReadings
+            .getOrNull(currentReading.index + 1)
+
+        // Extrair dados diários
         val dailyMaxTemp = daily.get("temperature_2m_max").get(0).asDouble()
         val dailyMaxUv = daily.get("uv_index_max").get(0).asDouble()
         val dailyMaxPrecip = daily.get("precipitation_probability_max").get(0).asInt()
@@ -76,9 +97,9 @@ class OpenMeteoClient(
             timestamp = now,
             latitude = json.get("latitude").asDouble(),
             longitude = json.get("longitude").asDouble(),
-            currentTemperature = temperatures[currentIndex],
-            currentPrecipitationProbability = precipitationProbs[currentIndex],
-            nextHourPrecipitationProbability = precipitationProbs.getOrElse(currentIndex + 1) { 0 },
+            currentTemperature = currentReading.temperature,
+            currentPrecipitationProbability = currentReading.precipitationProb,
+            nextHourPrecipitationProbability = nextHourReading?.precipitationProb ?: 0,
             dailyMaxTemperature = dailyMaxTemp,
             dailyMaxUvIndex = dailyMaxUv,
             dailyMaxPrecipitationProbability = dailyMaxPrecip

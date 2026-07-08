@@ -35,7 +35,7 @@ class WhatsAppNotificationConsumer(
             ConsumerConfig.GROUP_ID_CONFIG to "whatsapp-notification-group",
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java.name,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to AlertDeserializer::class.java.name,
-            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+            ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "latest",
             ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to "true"
         )
         
@@ -56,7 +56,7 @@ class WhatsAppNotificationConsumer(
         while (true) {
             val records = consumer.poll(Duration.ofMillis(1000))
             
-            for (record in records) {
+            records.forEach { record ->
                 val alert = record.value()
                 try {
                     sendWhatsAppMessage(alert)

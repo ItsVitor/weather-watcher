@@ -35,7 +35,7 @@ class HourlyRainConsumer(
             put(ConsumerConfig.GROUP_ID_CONFIG, "hourly-rain-consumer-group")
             put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java.name)
             put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, WeatherDeserializer::class.java.name)
-            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
             put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
         }
     )

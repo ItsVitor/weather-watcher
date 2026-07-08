@@ -24,10 +24,10 @@ import java.util.*
  */
 class DailySummaryConsumer(
     private val bootstrapServers: String = "localhost:9092",
-    private val thermalThreshold: Double = 30.0,
+    private val thermalThreshold: Double = 25.0,
     private val uvThreshold: Double = 3.0,
-    private val triggerHour: Int = 23,
-    private val triggerMinute: Int = 2
+    private val triggerHour: Int = 9,
+    private val triggerMinute: Int = 30
 ) : AutoCloseable {
 
     private val logger = LoggerFactory.getLogger(DailySummaryConsumer::class.java)
@@ -39,7 +39,7 @@ class DailySummaryConsumer(
             put(ConsumerConfig.GROUP_ID_CONFIG, "daily-summary-consumer-group")
             put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer::class.java.name)
             put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, WeatherDeserializer::class.java.name)
-            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest")
             put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
         }
     )
@@ -91,29 +91,19 @@ class DailySummaryConsumer(
     }
 
     private fun generateDailyAlerts(data: WeatherData) {
-        val alerts = mutableListOf<AlertEvent>()
-
-        // 1. Alerta de Guarda-Chuva
-        if (data.dailyMaxPrecipitationProbability > 70) {
-            alerts.add(createUmbrellaAlert(data))
-        }
-
-        // 2. Alerta de Proteção UV
-        if (data.dailyMaxUvIndex > uvThreshold) {
-            alerts.add(createUvAlert(data))
-        }
-
-        // 3. Alerta de Conforto Térmico
-        if (data.dailyMaxTemperature > thermalThreshold) {
-            alerts.add(createThermalAlert(data))
-        }
-
-        alerts.forEach { alert ->
-            publishAlert(alert)
-        }
-
+        val alertGenerators = listOf(
+            { if (data.dailyMaxPrecipitationProbability > 70) createUmbrellaAlert(data) else null },
+            { if (data.dailyMaxUvIndex > uvThreshold) createUvAlert(data) else null },
+            { if (data.dailyMaxTemperature > thermalThreshold) createThermalAlert(data) else null }
+        )
+        
+        val alerts = alertGenerators
+            .mapNotNull { it() }  // Executa cada lambda e remove nulls
+        
+        alerts.forEach(::publishAlert)  // Method reference
         logger.info("${alerts.size} alerta(s) diário(s) gerado(s)")
     }
+
 
     private fun createUmbrellaAlert(data: WeatherData): AlertEvent {
         return AlertEvent(

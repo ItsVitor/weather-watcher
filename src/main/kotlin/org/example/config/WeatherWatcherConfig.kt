@@ -11,7 +11,7 @@ object WeatherWatcherConfig {
      * Padrão: 15 minutos
      * Variável de ambiente: POLLING_INTERVAL_MINUTES
      */
-    val pollingIntervalMinutes: Long = System.getenv("POLLING_INTERVAL_MINUTES")?.toLongOrNull() ?: 15
+    val pollingIntervalMinutes: Long = System.getenv("POLLING_INTERVAL_MINUTES")?.toLongOrNull() ?: 1
     
     /**
      * Servidores Kafka bootstrap.
