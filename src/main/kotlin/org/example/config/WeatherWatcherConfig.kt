@@ -8,7 +8,7 @@ object WeatherWatcherConfig {
     
     /**
      * Intervalo de polling da API Open-Meteo em minutos.
-     * Padrão: 15 minutos
+     * Padrão: 1 minuto
      * Variável de ambiente: POLLING_INTERVAL_MINUTES
      */
     val pollingIntervalMinutes: Long = System.getenv("POLLING_INTERVAL_MINUTES")?.toLongOrNull() ?: 1
