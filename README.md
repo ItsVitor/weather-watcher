@@ -8,6 +8,68 @@ O **Weather-Watcher** é um sistema distribuído de monitoramento meteorológico
 
 O sistema opera sobre um cluster Kafka local (3 Brokers para garantia de alta disponibilidade e tolerância a falhas) e implementa o padrão *Publisher/Subscriber*.
 
+```mermaid
+flowchart LR
+    %% Fonte de dados
+    OpenMeteo["🌤️ OpenMeteo"]
+    Producer["Produtor<br/>WeatherAPIProducer"]
+
+    OpenMeteo -. "Polling (15 min)" .-> Producer
+
+    %% Cluster Kafka
+    subgraph Kafka["Apache Kafka Cluster"]
+
+        WeatherRaw["Tópico<br/><b>weather-raw</b><br/><br/>Eventos primitivos<br/>Partitions: 3<br/>Replication Factor: 3"]
+
+        subgraph Brokers["Brokers"]
+            B1["Broker 1"]
+            B2["Broker 2"]
+            B3["Broker 3"]
+        end
+
+        WeatherAlerts["Tópico<br/><b>weather-alerts</b><br/><br/>Eventos derivados / alertas<br/>Partitions: 3<br/>Replication Factor: 3"]
+
+        WeatherRaw <--> B1
+        WeatherRaw <--> B2
+        WeatherRaw <--> B3
+
+        B1 <--> WeatherAlerts
+        B2 <--> WeatherAlerts
+        B3 <--> WeatherAlerts
+    end
+
+    Producer -->|"JSON bruto"| WeatherRaw
+
+    %% Consumidores
+    Hourly["Consumidor/Produtor<br/>HourlyRainConsumer"]
+    Daily["Consumidor/Produtor<br/>DailySummaryConsumer"]
+    Heat["Consumidor/Produtor<br/>HeatwaveDetector"]
+
+    WeatherRaw -->|"Lê dados contínuos"| Hourly
+    WeatherRaw --> Daily
+    WeatherRaw --> Heat
+
+    %% Eventos derivados
+    RainAlert["🌧️ Alerta de chuva"]
+    DailyAlert["📅 Alertas diários"]
+    HeatAlert["🌡️ Onda de calor"]
+
+    Hourly --> RainAlert
+    Daily --> DailyAlert
+    Heat --> HeatAlert
+
+    RainAlert --> WeatherAlerts
+    DailyAlert --> WeatherAlerts
+    HeatAlert --> WeatherAlerts
+
+    %% Integração externa
+    Notifier["Integração Externa<br/>WhatsAppNotifier"]
+    Twilio["Twilio API<br/>WhatsApp"]
+
+    WeatherAlerts --> Notifier
+    Notifier -->|"POST HTTP"| Twilio
+```
+
 ### 1. Tópicos
 
 * `weather-raw` (Retenção curta): Tópico de alta frequência que recebe os "eventos primitivos" brutos coletados da API meteorológica.
