@@ -52,9 +52,21 @@
         </dependency>
 
         <!-- Jackson for JSON serialization -->
-        <!-- jackson-annotations being used instead of jackson-databind
-        to avoid error "java.lang.NoSuchFieldError: READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE, 
-        since databind does not support this ENUM specificity -->
+        <!-- jackson-core, jackson-databind e jackson-annotations declarados explicitamente
+        para fixar versão 2.15.3 em todo o ecossistema Jackson, evitando conflitos com
+        versões transitivas mais recentes trazidas pelo kafka-streams 4.3.0 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.15.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.3</version>
+        </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
