@@ -22,7 +22,10 @@ enum class AlertType {
     DAILY_UV_PROTECTION, // Proteção UV (6h00)
     DAILY_THERMAL,       // Conforto térmico (6h00)
     IMMINENT_RAIN,       // Chuva iminente (tempo real)
-    HEATWAVE             // Onda de calor (janela temporal)
+    HEATWAVE,            // Onda de calor (janela temporal)
+    HUMID_HEAT,          // Calor úmido: chuva + temperatura alta simultâneos (Streams - Situação A)
+    TEMPERATURE_DROP,    // Queda de temperatura: indicativo de frente fria (Streams - Situação B)
+    HEAT_BEFORE_RAIN     // Calor precede chuva: padrão Allen BEFORE (Streams - Situação C)
 }
 
 /**
