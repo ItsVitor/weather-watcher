@@ -40,8 +40,8 @@ import java.util.Properties
  */
 class HeatwaveStreamsDetector(
     private val bootstrapServers: String = WeatherWatcherConfig.kafkaBootstrapServers,
-    private val criticalThreshold: Double = 15.0,
-    private val windowSize: Long = 3,
+    private val criticalThreshold: Double = 20.0,
+    private val windowSize: Long = 5,
     private val pollingIntervalMinutes: Long = WeatherWatcherConfig.pollingIntervalMinutes
 ) {
     private val logger = LoggerFactory.getLogger(HeatwaveStreamsDetector::class.java)

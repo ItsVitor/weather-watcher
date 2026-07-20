@@ -44,7 +44,7 @@ import java.util.Properties
  */
 class TemperatureDropStream(
     private val bootstrapServers: String = WeatherWatcherConfig.kafkaBootstrapServers,
-    private val dropThreshold: Double = 0.5,
+    private val dropThreshold: Double = 2.0,
     private val windowHours: Long = 1
 ) {
     private val logger = LoggerFactory.getLogger(TemperatureDropStream::class.java)

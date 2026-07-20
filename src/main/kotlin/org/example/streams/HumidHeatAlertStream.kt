@@ -38,7 +38,7 @@ class HumidHeatAlertStream(
     private val bootstrapServers: String = WeatherWatcherConfig.kafkaBootstrapServers,
     private val rainThreshold: Int = -1,
     private val temperatureThreshold: Double = 20.0,
-    private val joinWindowMinutes: Long = 3
+    private val joinWindowMinutes: Long = 5
 ) {
     private val logger = LoggerFactory.getLogger(HumidHeatAlertStream::class.java)
 

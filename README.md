@@ -8,6 +8,8 @@ O **Weather-Watcher** é um sistema distribuído de monitoramento meteorológico
 
 O sistema opera sobre um cluster Kafka local (3 Brokers para garantia de alta disponibilidade e tolerância a falhas) e implementa o padrão *Publisher/Subscriber*.
 
+Projeto 1:
+
 ```mermaid
 flowchart LR
     %% Fonte de dados
@@ -70,6 +72,48 @@ flowchart LR
     Notifier -->|"POST HTTP"| Twilio
 ```
 
+
+Projeto 2:
+
+```mermaid
+flowchart LR
+    OpenMeteo["🌤️ OpenMeteo"]
+    Producer["Produtor<br/>WeatherAPIProducer"]
+    OpenMeteo -. "Polling (15 min)" .-> Producer
+
+    subgraph Kafka["Apache Kafka Cluster"]
+        WeatherRaw["Tópico<br/><b>weather-raw</b><br/><br/>Eventos primitivos<br/>Partitions: 3<br/>Replication Factor: 3"]
+        WeatherAlerts["Tópico<br/><b>weather-alerts</b><br/><br/>Eventos derivados / alertas<br/>Partitions: 3<br/>Replication Factor: 3"]
+    end
+
+    Producer -->|"JSON bruto"| WeatherRaw
+
+    subgraph Streams["Kafka Streams Topologies"]
+        HeatwaveS["HeatwaveStreamsDetector<br/><i>SlidingWindows + count</i>"]
+        HumidHeat["HumidHeatAlertStream<br/><i>KStream-KStream join</i>"]
+        TempDrop["TemperatureDropStream<br/><i>TumblingWindow + aggregate</i>"]
+        HeatRain["HeatBeforeRainStream<br/><i>SessionWindows + Allen BEFORE</i>"]
+    end
+
+    WeatherRaw --> HeatwaveS
+    WeatherRaw --> HumidHeat
+    WeatherRaw --> TempDrop
+    WeatherRaw --> HeatRain
+    HeatwaveS -->|"🌡️ Onda de calor"| WeatherAlerts
+    HumidHeat -->|"🌧️🌡️ Calor úmido"| WeatherAlerts
+    TempDrop -->|"🌬️ Queda de temp"| WeatherAlerts
+    HeatRain -->|"⛈️ Calor antes da chuva"| WeatherAlerts
+
+    Notifier["Integração Externa<br/>WhatsAppNotifier"]
+    Twilio["Twilio API<br/>WhatsApp"]
+    Dashboard["DashboardServer<br/>WebSocket :8887"]
+    Browser["🌐 Browser<br/>dashboard.html"]
+    WeatherAlerts --> Notifier
+    Notifier -->|"POST HTTP"| Twilio
+    WeatherAlerts --> Dashboard
+    Dashboard -->|"WebSocket broadcast"| Browser
+```
+
 ### 1. Tópicos
 
 * `weather-raw` (Retenção curta): Tópico de alta frequência que recebe os "eventos primitivos" brutos coletados da API meteorológica.
@@ -121,6 +165,18 @@ src/main/kotlin/org/example/
     ├── HeatwaveDetector.kt              # Processamento stateful (Produtor + Consumidor)
     ├── HeatwaveDetectorApp.kt           # Aplicação principal do HeatwaveDetector
     └── TemperatureStore.kt              # Classe auxiliar para manter o estado (fila circular de temps)
+└── streams/                             # Projeto 2 — Kafka Streams DSL
+    ├── HeatwaveStreamsDetector.kt       # Onda de calor via Streams (SlidingWindows + count)
+    ├── HeatwaveStreamsDetectorApp.kt    # Aplicação principal do HeatwaveStreamsDetector
+    ├── HumidHeatAlertStream.kt          # Situação A: calor úmido (KStream-KStream join, Sliding 30min)
+    ├── HumidHeatAlertStreamApp.kt       # Aplicação principal do HumidHeatAlertStream
+    ├── TemperatureDropStream.kt         # Situação B: queda de temperatura (TumblingWindow + FixedKeyProcessor)
+    ├── TemperatureDropStreamApp.kt      # Aplicação principal do TemperatureDropStream
+    ├── HeatBeforeRainStream.kt          # Situação C: Allen BEFORE (SessionWindows + KStream-KStream join)
+    └── HeatBeforeRainStreamApp.kt       # Aplicação principal do HeatBeforeRainStream
+└── dashboard/                           # Dashboard de monitoramento em tempo real
+    ├── DashboardServer.kt               # WebSocketServer + KafkaConsumer de weather-alerts
+    └── DashboardServerApp.kt            # Aplicação principal do DashboardServer
 ```
 
 ---
@@ -199,8 +255,25 @@ source .env && mvn compile exec:java -Dexec.mainClass="org.example.consumers.Hou
 # Terminal 4: Detector de ondas de calor
 source .env && mvn compile exec:java -Dexec.mainClass="org.example.processors.HeatwaveDetectorAppKt"
 
+# Terminal 4b (alternativa Streams): Detector de ondas de calor via Kafka Streams
+source .env && mvn compile exec:java -Dexec.mainClass="org.example.streams.HeatwaveStreamsDetectorAppKt"
+
 # Terminal 5: Notificador WhatsApp
 source .env && mvn compile exec:java -Dexec.mainClass="org.example.consumers.WhatsAppNotificationConsumerAppKt"
+
+# Terminal 9: Dashboard em tempo real (WebSocket)
+source .env && mvn compile exec:java -Dexec.mainClass="org.example.dashboard.DashboardServerAppKt"
+# Abrir no navegador: src/main/resources/dashboard.html
+
+# Projeto 2 — Topologias Kafka Streams adicionais
+# Terminal 6: Calor úmido (Situação A)
+source .env && mvn compile exec:java -Dexec.mainClass="org.example.streams.HumidHeatAlertStreamAppKt"
+
+# Terminal 7: Queda de temperatura (Situação B)
+source .env && mvn compile exec:java -Dexec.mainClass="org.example.streams.TemperatureDropStreamAppKt"
+
+# Terminal 8: Calor precede chuva — Allen BEFORE (Situação C)
+source .env && mvn compile exec:java -Dexec.mainClass="org.example.streams.HeatBeforeRainStreamAppKt"
 ```
 
 ---
@@ -265,7 +338,10 @@ enum class AlertType {
     DAILY_UV_PROTECTION, // Proteção UV
     DAILY_THERMAL,       // Conforto térmico
     IMMINENT_RAIN,       // Chuva iminente
-    HEATWAVE             // Onda de calor
+    HEATWAVE,            // Onda de calor
+    HUMID_HEAT,          // Calor úmido: chuva + temperatura alta (Streams - Situação A)
+    TEMPERATURE_DROP,    // Queda de temperatura: frente fria (Streams - Situação B)
+    HEAT_BEFORE_RAIN     // Calor precede chuva: Allen BEFORE (Streams - Situação C)
 }
 
 enum class Severity {
@@ -280,13 +356,15 @@ enum class Severity {
 ## Tecnologias Utilizadas
 
 - **Kotlin 1.9.23**: Linguagem de programação
-- **Apache Kafka 4.2.0**: Plataforma de streaming de eventos
+- **Apache Kafka 4.3.0**: Plataforma de streaming de eventos
+- **Kafka Streams 4.3.0**: DSL para processamento de streams (Projeto 2)
 - **KRaft Mode**: Kafka sem Zookeeper (3 brokers combinados)
 - **Jackson 2.15.3**: Serialização/deserialização JSON
 - **OkHttp 4.12.0**: Cliente HTTP para API Open-Meteo
 - **Twilio SDK 10.1.0**: Integração WhatsApp
 - **JUnit 5.10.2**: Framework de testes
 - **SLF4J + Logback**: Logging
+- **Java-WebSocket 1.5.4**: Servidor WebSocket embutido para o dashboard
 
 ---
 

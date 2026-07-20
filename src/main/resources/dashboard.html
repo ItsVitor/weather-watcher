@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Watcher — Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f1117;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #2d3748;
+        }
+
+        header h1 { font-size: 1.5rem; font-weight: 600; }
+        header h1 span { color: #63b3ed; }
+
+        #status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        #status-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: #fc8181;
+            transition: background 0.3s;
+        }
+
+        #status-dot.connected { background: #68d391; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        #stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: #1a202c;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-card .value { font-size: 2rem; font-weight: 700; }
+        .stat-card .label { font-size: 0.75rem; color: #718096; margin-top: 0.25rem; }
+
+        #alerts-container { display: flex; flex-direction: column; gap: 0.75rem; }
+
+        .alert-card {
+            background: #1a202c;
+            border: 1px solid #2d3748;
+            border-left: 4px solid;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-card.INFO    { border-left-color: #63b3ed; }
+        .alert-card.WARNING { border-left-color: #f6ad55; }
+        .alert-card.ALERT   { border-left-color: #fc8181; }
+
+        .alert-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-type {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+        }
+
+        .INFO    .alert-type { background: #2b4c7e; color: #90cdf4; }
+        .WARNING .alert-type { background: #7b4f12; color: #fbd38d; }
+        .ALERT   .alert-type { background: #742a2a; color: #feb2b2; }
+
+        .alert-time { font-size: 0.75rem; color: #718096; }
+        .alert-message { font-size: 0.95rem; line-height: 1.5; }
+
+        .alert-meta {
+            margin-top: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .meta-tag {
+            font-size: 0.7rem;
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        #empty {
+            text-align: center;
+            color: #4a5568;
+            padding: 4rem;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🌤️ Weather <span>Watcher</span></h1>
+    <div id="status">
+        <div id="status-dot"></div>
+        <span id="status-text">Desconectado</span>
+    </div>
+</header>
+
+<div id="stats">
+    <div class="stat-card">
+        <div class="value" id="count-total">0</div>
+        <div class="label">Total de Alertas</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" style="color:#90cdf4" id="count-info">0</div>
+        <div class="label">INFO</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" style="color:#fbd38d" id="count-warning">0</div>
+        <div class="label">WARNING</div>
+    </div>
+    <div class="stat-card">
+        <div class="value" style="color:#feb2b2" id="count-alert">0</div>
+        <div class="label">ALERT</div>
+    </div>
+</div>
+
+<div id="alerts-container">
+    <div id="empty">Aguardando alertas do Kafka...</div>
+</div>
+
+<script>
+    const ws = new WebSocket('ws://localhost:8887');
+    const dot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const container = document.getElementById('alerts-container');
+    const empty = document.getElementById('empty');
+
+    const counters = { total: 0, INFO: 0, WARNING: 0, ALERT: 0 };
+
+    ws.onopen = () => {
+        dot.classList.add('connected');
+        statusText.textContent = 'Conectado';
+    };
+
+    ws.onclose = () => {
+        dot.classList.remove('connected');
+        statusText.textContent = 'Desconectado';
+    };
+
+    ws.onmessage = (event) => {
+        const alert = JSON.parse(event.data);
+        if (empty.parentNode) empty.remove();
+
+        counters.total++;
+        counters[alert.severity] = (counters[alert.severity] || 0) + 1;
+        document.getElementById('count-total').textContent   = counters.total;
+        document.getElementById('count-info').textContent    = counters.INFO    || 0;
+        document.getElementById('count-warning').textContent = counters.WARNING || 0;
+        document.getElementById('count-alert').textContent   = counters.ALERT   || 0;
+
+        const time = new Date(alert.timestamp).toLocaleTimeString('pt-BR');
+        const metaTags = Object.entries(alert.metadata || {})
+            .map(([k, v]) => `<span class="meta-tag">${k}: ${v}</span>`)
+            .join('');
+
+        const card = document.createElement('div');
+        card.className = `alert-card ${alert.severity}`;
+        card.innerHTML = `
+            <div class="alert-header">
+                <span class="alert-type">${alert.alertType}</span>
+                <span class="alert-time">${time}</span>
+            </div>
+            <div class="alert-message">${alert.message}</div>
+            ${metaTags ? `<div class="alert-meta">${metaTags}</div>` : ''}
+        `;
+
+        container.insertBefore(card, container.firstChild);
+    };
+</script>
+
+</body>
+</html>

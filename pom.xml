@@ -92,6 +92,13 @@
             <version>4.12.0</version>
         </dependency>
 
+        <!-- Java-WebSocket para servidor WebSocket do dashboard -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.4</version>
+        </dependency>
+
         <!-- JUnit 5 for testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

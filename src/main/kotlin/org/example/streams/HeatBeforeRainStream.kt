@@ -40,7 +40,7 @@ import java.util.Properties
  */
 class HeatBeforeRainStream(
     private val bootstrapServers: String = WeatherWatcherConfig.kafkaBootstrapServers,
-    private val heatThreshold: Double = 32.0,
+    private val heatThreshold: Double = 25.0,
     private val rainThreshold: Int = 60,
     private val sessionGapMinutes: Long = 30,
     private val joinWindowHours: Long = 2
